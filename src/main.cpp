@@ -250,18 +250,6 @@ int main(int argc, char* argv[]) {
             if (cec) cec->wake();
         }
 
-        void on_volume_changed(uint8_t vol) override {
-            if (cec && cec->volume_enabled()) cec->set_volume(vol);  // TV does the attenuation
-            else sink.set_volume(vol);
-            if (display) display->set_volume(vol);
-        }
-
-        void on_mute_changed(bool muted) override {
-            if (cec && cec->volume_enabled()) cec->set_muted(muted);
-            else sink.set_muted(muted);
-            if (display) display->set_muted(muted);
-        }
-
         static const char* codec_name(const std::optional<SendspinCodecFormat>& codec) {
             if (!codec.has_value()) return "";
             switch (*codec) {
@@ -288,11 +276,13 @@ int main(int argc, char* argv[]) {
         }
 
         void on_volume_changed(uint8_t vol) override {
-            sink.set_volume(vol);
+            if (cec && cec->volume_enabled()) cec->set_volume(vol);  // TV does the attenuation
+            else sink.set_volume(vol);
             if (display) display->set_volume(vol);
         }
         void on_mute_changed(bool muted) override {
-            sink.set_muted(muted);
+            if (cec && cec->volume_enabled()) cec->set_muted(muted);
+            else sink.set_muted(muted);
             if (display) display->set_muted(muted);
         }
         void on_static_delay_changed(uint16_t delay_ms) override {
