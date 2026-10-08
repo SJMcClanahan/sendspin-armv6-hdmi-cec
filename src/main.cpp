@@ -10,6 +10,7 @@
 #include "alsa_pipe_sink.h"
 #include "config.h"
 #include "oled_display.h"
+#include "cec_controller.h"
 
 #include <atomic>
 #include <chrono>
@@ -54,6 +55,7 @@ static void print_usage(const char* prog) {
 int main(int argc, char* argv[]) {
     std::signal(SIGINT, signal_handler);
     std::signal(SIGTERM, signal_handler);
+    std::signal(SIGPIPE, SIG_IGN);
 
     // Parse command line
     std::string config_path = DEFAULT_CONFIG_PATH;
@@ -158,6 +160,15 @@ int main(int argc, char* argv[]) {
         display = std::make_unique<OledDisplay>(oled_config, cfg.name);
     }
 
+    std::unique_ptr<CecController> cec;
+    if (cfg.cec) {
+        cec = std::make_unique<CecController>(cfg.cec_volume);
+        if (!cec->start()) {
+            fprintf(stderr, "Warning: failed to start cec-client, CEC disabled\n");
+            cec.reset();
+        }
+    }
+
     // Configure client
     SendspinClientConfig client_config;
     client_config.client_id = "sendspin-armv6-" + client_id;
@@ -211,8 +222,9 @@ int main(int argc, char* argv[]) {
         AlsaPipeSink& sink;
         PlayerRole& player;
         OledDisplay* display;  // null when the display is disabled
-        ArmPlayerListener(AlsaPipeSink& s, PlayerRole& p, int timeout_s, OledDisplay* d)
-            : idle_timeout_s(timeout_s), sink(s), player(p), display(d) {}
+        CecController cec;
+        ArmPlayerListener(AlsaPipeSink& s, PlayerRole& p, int timeout_s, OledDisplay* d, CecController c)
+            : idle_timeout_s(timeout_s), sink(s), player(p), display(d), cec(c) {}
 
         size_t on_audio_write(uint8_t* data, size_t length,
                               uint32_t timeout_ms) override {
@@ -235,6 +247,19 @@ int main(int argc, char* argv[]) {
                                           params.sample_rate.value_or(0),
                                           params.bit_depth.value_or(0));
             }
+            if (cec) cec->wake();
+        }
+
+        void on_volume_changed(uint8_t vol) override {
+            if (cec && cec->volume_enabled()) cec->set_volume(vol);  // TV does the attenuation
+            else sink.set_volume(vol);
+            if (display) display->set_volume(vol);
+        }
+
+        void on_mute_changed(bool muted) override {
+            if (cec && cec->volume_enabled()) cec->set_muted(muted);
+            else sink.set_muted(muted);
+            if (display) display->set_muted(muted);
         }
 
         static const char* codec_name(const std::optional<SendspinCodecFormat>& codec) {
@@ -299,7 +324,7 @@ int main(int argc, char* argv[]) {
         bool is_network_ready() override { return true; }
     };
 
-    ArmPlayerListener player_listener(audio_sink, player, cfg.idle_timeout_s, display.get());
+    ArmPlayerListener player_listener(audio_sink, player, cfg.idle_timeout_s, display.get(), cec.get());
     audio_sink.on_frames_played = [&player](uint32_t frames, int64_t timestamp) {
         player.notify_audio_played(frames, timestamp);
     };
@@ -331,7 +356,7 @@ int main(int argc, char* argv[]) {
     // SDK reports 0 until the server speaks.
     if (cfg.initial_volume >= 0) {
         auto vol = static_cast<uint8_t>(cfg.initial_volume);
-        audio_sink.set_volume(vol);
+        cec->set_volume(vol);
         player.update_volume(vol);
         if (display) display->set_volume(vol);
         fprintf(stderr, "Initial volume set to %u\n", vol);
@@ -357,6 +382,7 @@ int main(int argc, char* argv[]) {
                 fprintf(stderr, ">>> Idle timeout reached (%d s), releasing audio device\n", cfg.idle_timeout_s);
                 audio_sink.stop();
                 player_listener.device_open = false;
+                if (cec) cec->standby();
             }
         }
 

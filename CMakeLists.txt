@@ -7,6 +7,7 @@ include(FetchContent)
 # the flag propagates to sendspin-cpp and its bundled FLAC/Opus decoders.
 set(CMAKE_C_FLAGS_RELEASE   "-O3 -DNDEBUG" CACHE STRING "" FORCE)
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG" CACHE STRING "" FORCE)
+set(CMAKE_CXX_EXTENSIONS ON)
 
 set(SENDSPIN_ENABLE_PLAYER     ON  CACHE BOOL "" FORCE)
 set(SENDSPIN_ENABLE_CONTROLLER OFF CACHE BOOL "" FORCE)
@@ -32,6 +33,7 @@ add_executable(sendspin-armv6
     src/framebuffer.cpp
     src/oled_display.cpp
     src/ssd1306.cpp
+    src/cec_controller.cpp
 )
 
 target_link_libraries(sendspin-armv6 PRIVATE sendspin asound pthread)

@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <fstream>
 #include <stdexcept>
+#include <cctype>
 #include <string>
 
 static std::string trim(const std::string& s) {
@@ -31,6 +32,19 @@ static void parse_int_key(const std::string& path, int line_num, const std::stri
         fprintf(stderr, "%s:%d: invalid %s value '%s', ignoring\n", path.c_str(), line_num,
                 key.c_str(), value.c_str());
     }
+}
+
+static bool parse_bool(std::string s, bool default_value = false) {
+    // trim whitespace
+    s.erase(0, s.find_first_not_of(" \t\r\n"));
+    s.erase(s.find_last_not_of(" \t\r\n") + 1);
+    // lowercase
+    std::transform(s.begin(), s.end(), s.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+
+    if (s == "true" || s == "yes" || s == "on" || s == "1") return true;
+    if (s == "false" || s == "no" || s == "off" || s == "0") return false;
+    return default_value;  // unrecognized or empty
 }
 
 bool load_config(const std::string& path, Config& config) {
@@ -103,6 +117,10 @@ bool load_config(const std::string& path, Config& config) {
                 fprintf(stderr, "%s:%d: invalid idle_timeout value '%s', ignoring\n",
                         path.c_str(), line_num, value.c_str());
             }
+        } else if (key == "cec") {
+            config.cec = parse_bool(value, false);
+        } else if (key == "cec_volume") {
+            config.cec_volume = parse_bool(value, false);
         } else if (key == "display") {
             if (value == "none" || value == "ssd1306" || value == "sh1106") {
                 config.display = value;
