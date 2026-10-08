@@ -222,8 +222,8 @@ int main(int argc, char* argv[]) {
         AlsaPipeSink& sink;
         PlayerRole& player;
         OledDisplay* display;  // null when the display is disabled
-        CecController cec;
-        ArmPlayerListener(AlsaPipeSink& s, PlayerRole& p, int timeout_s, OledDisplay* d, CecController c)
+        CecController* cec;
+        ArmPlayerListener(AlsaPipeSink& s, PlayerRole& p, int timeout_s, OledDisplay* d, CecController* c)
             : idle_timeout_s(timeout_s), sink(s), player(p), display(d), cec(c) {}
 
         size_t on_audio_write(uint8_t* data, size_t length,
