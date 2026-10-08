@@ -4,6 +4,10 @@ Headless [Sendspin](https://github.com/Sendspin/sendspin-cpp) audio client for A
 
 Plays music through available ALSA devices. No controls, just audio output as a systemd daemon, with an optional small OLED screen showing what's playing.
 
+## HDMI-CEC Fork
+
+This is a fork of the project made by LeoLTM to add HDMI-CEC control and (eventually) HDMI video output.
+
 ## How it works
 
 - Uses [sendspin-cpp](https://github.com/Sendspin/sendspin-cpp) for the Sendspin protocol, audio decoding, and time synchronization
