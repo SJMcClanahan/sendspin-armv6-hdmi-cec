@@ -8,6 +8,8 @@ Plays music through available ALSA devices. No controls, just audio output as a 
 
 This is a fork of the project made by LeoLTM to add HDMI-CEC control and (eventually) HDMI video output.
 
+All of the following readme is from the original project.
+
 ## How it works
 
 - Uses [sendspin-cpp](https://github.com/Sendspin/sendspin-cpp) for the Sendspin protocol, audio decoding, and time synchronization
